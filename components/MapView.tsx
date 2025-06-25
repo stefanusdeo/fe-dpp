@@ -3,10 +3,12 @@
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+import Pin from "@/assets/pin-oranger.png";
 
 const DefaultIcon = L.icon({
-  iconUrl: require("leaflet/dist/images/marker-icon.png"),
-  shadowUrl: require("leaflet/dist/images/marker-shadow.png"),
+  iconUrl: Pin.src,
+  iconSize: [10, 18],
+  iconAnchor: [16, 32],
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
