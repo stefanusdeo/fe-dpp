@@ -56,7 +56,7 @@ const MapView: React.FC<MapViewProps> = ({ data }) => {
       className="w-full h-[400px] rounded-lg"
     >
       <TileLayer
-        url="https://api.maptiler.com/maps/dataviz/{z}/{x}/{y}.png?key=9S2BWBYDLYNfZVblMlb9"
+        url={`https://api.maptiler.com/maps/dataviz/{z}/{x}/{y}.png?key=${process.env.NEXT_PUBLIC_SECRET_KEY_MAP}`}
         attribution='&copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a> & <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
       />
       {markers.map((marker, index) => (

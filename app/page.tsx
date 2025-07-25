@@ -121,11 +121,9 @@ export default function Dashboard() {
     fetchInitialData();
   }, []);
 
-  const handleToggleUnit = useCallback((nama: string) => {
+  const handleToggleUnit = useCallback((id: string) => {
     setSelectedUnits((prev) =>
-      prev.includes(nama)
-        ? prev.filter((item) => item !== nama)
-        : [...prev, nama]
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     );
   }, []);
 
@@ -185,27 +183,36 @@ export default function Dashboard() {
               <h4 className="text-sm font-medium mb-2">Filter Unit Kerja</h4>
               <Input placeholder="Cari Unit Kerja" className="mb-3" />
               <div className="flex flex-wrap gap-2 mb-3">
-                {selectedUnits.map((item, index) => (
-                  <Badge
-                    key={index}
-                    variant="secondary"
-                    className="flex items-center bg-blue-200 text-blue-600 gap-1 pr-2"
-                  >
-                    <span className="truncate">{item}</span>
-                    <button onClick={() => handleToggleUnit(item)}>X</button>
-                  </Badge>
-                ))}
+                {selectedUnits.map((unitId) => {
+                  const unit = unitKerjaList.find(
+                    (u) => u.id.toString() === unitId
+                  );
+                  return (
+                    <Badge
+                      key={unitId}
+                      variant="secondary"
+                      className="flex items-center bg-blue-200 text-blue-600 gap-1 pr-2"
+                    >
+                      <span className="truncate">{unit?.nama || unitId}</span>
+                      <button onClick={() => handleToggleUnit(unitId)}>
+                        X
+                      </button>
+                    </Badge>
+                  );
+                })}
               </div>
               <div className="space-y-2 max-h-[150px] overflow-y-auto">
                 {unitKerjaList.map((unit, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
+                  <div key={unit.id} className="flex items-center gap-2">
                     <Checkbox
-                      id={`check-${idx}`}
-                      checked={selectedUnits.includes(unit.nama)}
-                      onCheckedChange={() => handleToggleUnit(unit.nama)}
+                      id={`check-${unit.id}`}
+                      checked={selectedUnits.includes(unit.id.toString())}
+                      onCheckedChange={() =>
+                        handleToggleUnit(unit.id.toString())
+                      }
                     />
                     <label
-                      htmlFor={`check-${idx}`}
+                      htmlFor={`check-${unit.id}`}
                       className="text-sm text-gray-700"
                     >
                       {unit.nama}
