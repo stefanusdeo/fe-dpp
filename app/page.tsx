@@ -1,5 +1,4 @@
 "use client";
-
 import {
   BarChart,
   Bar,
@@ -9,44 +8,140 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import L from "leaflet";
-import Image from "next/image";
-import flagImg from "@/assets/flag.png";
-import manImg from "@/assets/man.png";
-import womanImg from "@/assets/Woman.png";
-import familyImg from "@/assets/family.png";
 import dynamic from "next/dynamic";
+import Image from "next/image";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { url } from "@/lib/api/dashboard";
+import { ApiResponse } from "@/types/apiType";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
 
-const MapView = dynamic(() => import("@/components/MapView"), {
-  ssr: false,
-});
+import flagImg from "@/assets/flag.png";
+import manImg from "@/assets/man.png";
+import womanImg from "@/assets/Woman.png";
+import familyImg from "@/assets/family.png";
+
+const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
 
 const dataJenjang = [
-  { name: "Pertama", value: 40, fill: "#EF4444" },
-  { name: "Muda", value: 80, fill: "#22C55E" },
-  { name: "Madya", value: 60, fill: "#3B82F6" },
-  { name: "Utama", value: 10, fill: "#8B5CF6" },
+  { name: "Pertama", value: 0, fill: "#EF4444" },
+  { name: "Muda", value: 0, fill: "#22C55E" },
+  { name: "Madya", value: 0, fill: "#3B82F6" },
+  { name: "Utama", value: 0, fill: "#8B5CF6" },
 ];
 
-const unitKerjaList = [
-  "Kementrian Agama",
-  "Kementrian Dalam Negeri",
-  "Kementrian Hukum dan HAM",
-  "Kementrian Kesehatan",
-  "Kementrian Luar Negeri",
-  "Kementrian Pertahanan",
-];
+// TYPES
+type Province = {
+  id: number;
+  nama: string;
+  latitude: string;
+  longitude: string;
+};
+type UnitKerja = { id: number; nama: string };
+type Population = {
+  total_perancang: number;
+  total_perancang_pria: number;
+  total_perancang_wanita: number;
+};
+type Perancang = { jumlah_perancang: number; jenjang_perancang: string };
 
+// MAIN
 export default function Dashboard() {
+  const [province, setProvince] = useState<Province[]>([]);
+  const [unitKerjaList, setUnitKerjaList] = useState<UnitKerja[]>([]);
+  const [selectedUnits, setSelectedUnits] = useState<string[]>([]);
+  const [selectedProvince, setSelectedProvince] = useState<number | null>(null);
+
+  const [population, setPopulation] = useState<Population | null>(null);
+  const [perancang, setPerancang] = useState<Perancang[]>([]);
+
+  const fetchDashboardData = useCallback(async () => {
+    try {
+      const buildUrl = (base: string) => {
+        const apiUrl = new URL(base);
+        if (selectedProvince)
+          apiUrl.searchParams.set("provinsi_id", selectedProvince.toString());
+        if (selectedUnits.length > 0)
+          apiUrl.searchParams.set("unit_kerja_id", selectedUnits.join(","));
+        return apiUrl.toString();
+      };
+
+      const [popResp, perJenjangResp] = await Promise.all([
+        fetch(buildUrl(url.populasiPerancang)),
+        fetch(buildUrl(url.perancangPerjenjang)),
+      ]);
+
+      const popData: ApiResponse<any> = await popResp.json();
+      const jenjangData: ApiResponse<any> = await perJenjangResp.json();
+
+      setPopulation(popResp.status === 200 ? popData?.Data : null);
+      setPerancang(
+        perJenjangResp.status === 200 ? jenjangData?.Data ?? [] : []
+      );
+    } catch (err) {
+      console.error("Error fetching dashboard data", err);
+    }
+  }, [selectedProvince, selectedUnits]);
+
+  useEffect(() => {
+    fetchDashboardData(); // initial fetch
+  }, []);
+
+  // debounce fetch saat filter berubah
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      fetchDashboardData();
+    }, 2000);
+    return () => clearTimeout(handler);
+  }, [fetchDashboardData]);
+
+  const fetchInitialData = async () => {
+    try {
+      const [provRes, unitRes] = await Promise.all([
+        fetch(url.dashboardProvinsi),
+        fetch(url.unitKerja),
+      ]);
+      const provData: ApiResponse<any> = await provRes.json();
+      const unitData: ApiResponse<any> = await unitRes.json();
+      setProvince(Array.isArray(provData?.Data) ? provData.Data : []);
+      setUnitKerjaList(Array.isArray(unitData?.Data) ? unitData.Data : []);
+    } catch (err) {
+      console.error("Error fetching init data", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchInitialData();
+  }, []);
+
+  const handleToggleUnit = useCallback((nama: string) => {
+    setSelectedUnits((prev) =>
+      prev.includes(nama)
+        ? prev.filter((item) => item !== nama)
+        : [...prev, nama]
+    );
+  }, []);
+
+  const mergedData = useMemo(() => {
+    return dataJenjang.map((item) => {
+      const found = perancang.find(
+        (p) => p.jenjang_perancang.toLowerCase() === item.name.toLowerCase()
+      );
+      return { ...item, value: found?.jumlah_perancang ?? 0 };
+    });
+  }, [perancang]);
+
+  const dataProvSelected = useMemo(() => {
+    return province.find((p) => p.id === selectedProvince);
+  }, [selectedProvince, province]);
+
   return (
     <main className="p-6 space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -55,15 +150,21 @@ export default function Dashboard() {
         </h1>
 
         <div className="flex items-center gap-3">
-          {/* Dropdown */}
-          <select className="border border-black rounded-lg px-4 py-2 text-gray-500 text-sm focus:outline-none focus:ring-1 ">
+          <select
+            className="border border-black rounded-lg px-4 py-2 text-sm text-gray-500"
+            onChange={(e) => {
+              setSelectedProvince(parseInt(e.target.value));
+              setSelectedUnits([]);
+            }}
+          >
             <option>Pilih Provinsi</option>
-            <option>Riau</option>
-            <option>Balikpapan</option>
-            <option>Jakarta</option>
+            {province.map((prov) => (
+              <option key={prov.id} value={prov.id}>
+                {prov.nama}
+              </option>
+            ))}
           </select>
 
-          {/* Tombol Unit Kerja */}
           <Popover>
             <PopoverTrigger asChild>
               <Button
@@ -80,41 +181,34 @@ export default function Dashboard() {
                 Unit Kerja
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[350px] z-[9999]">
+            <PopoverContent className="w-[350px] right-1 z-[9999]">
               <h4 className="text-sm font-medium mb-2">Filter Unit Kerja</h4>
               <Input placeholder="Cari Unit Kerja" className="mb-3" />
               <div className="flex flex-wrap gap-2 mb-3">
-                {[
-                  "Kementrian Hukum dan HAM",
-                  "Kementrian Kesehatan",
-                  "DPR",
-                ].map((item, index) => (
+                {selectedUnits.map((item, index) => (
                   <Badge
                     key={index}
                     variant="secondary"
                     className="flex items-center bg-blue-200 text-blue-600 gap-1 pr-2"
                   >
-                    <button
-                      type="button"
-                      className="ml-1 rounded-full hover:bg-gray-200"
-                      onClick={() => console.log("hapus:", item)} // ganti nanti ke handle remove
-                    >
-                      X
-                    </button>
-
-                    {item}
+                    <span className="truncate">{item}</span>
+                    <button onClick={() => handleToggleUnit(item)}>X</button>
                   </Badge>
                 ))}
               </div>
               <div className="space-y-2 max-h-[150px] overflow-y-auto">
-                {unitKerjaList.map((item, idx) => (
+                {unitKerjaList.map((unit, idx) => (
                   <div key={idx} className="flex items-center gap-2">
-                    <Checkbox id={`check-${idx}`} />
+                    <Checkbox
+                      id={`check-${idx}`}
+                      checked={selectedUnits.includes(unit.nama)}
+                      onCheckedChange={() => handleToggleUnit(unit.nama)}
+                    />
                     <label
                       htmlFor={`check-${idx}`}
                       className="text-sm text-gray-700"
                     >
-                      {item}
+                      {unit.nama}
                     </label>
                   </div>
                 ))}
@@ -124,28 +218,25 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Peta dan Filter */}
+      {/* MAP */}
       <div className="bg-white rounded-lg shadow p-4">
-        <MapView />
+        <MapView data={dataProvSelected ? [dataProvSelected] : province} />
       </div>
 
+      {/* INFO BOXES */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+        {/* LEFT */}
         <div className="grid gap-3">
-          {/* KOORDINAT */}
-          <div className="bg-white px-6 py-4 rounded-2xl shadow-md flex items-center gap-4">
-            <Image className="" src={flagImg} alt="flag" />
-            <div>
-              <div className="flex items-center gap-2 font-semibold text-lg text-black">
-                Koordinat Wilayah
-                <span className="bg-red-500 text-white px-3 py-0.5 rounded-full text-sm font-semibold">
-                  Indonesia
-                </span>
-              </div>
-              <p className="text-xl font-bold mt-1">(0.2933469, 101.7068294)</p>
-            </div>
-          </div>
-
-          {/* POPULASI */}
+          {/* Koordinat */}
+          <InfoBox
+            title="Koordinat Wilayah"
+            subtitle="Indonesia"
+            value={`(${dataProvSelected?.latitude || 0} , ${
+              dataProvSelected?.longitude || 0
+            })`}
+            icon={flagImg}
+          />
+          {/* Populasi */}
           <div className="bg-white px-6 py-4 rounded-2xl shadow-md space-y-4">
             <div className="flex items-center gap-2 font-semibold text-lg text-black">
               Populasi Perancang
@@ -154,34 +245,31 @@ export default function Dashboard() {
               </span>
             </div>
             <div className="flex justify-around items-center text-center">
-              <div className="flex items-center">
-                <Image className="" src={manImg} alt="flag" />
-                <p className="text-2xl font-bold text-black mt-1">123</p>
-              </div>
-              <div className="flex items-center">
-                <Image className="" src={womanImg} alt="flag" />
-                <p className="text-2xl font-bold text-black mt-1">89</p>
-              </div>
-              <div className="flex items-center">
-                <Image className="" src={familyImg} alt="flag" />
-                <p className="text-2xl font-bold text-black mt-1">12</p>
-              </div>
+              <PopBox icon={manImg} value={population?.total_perancang || 0} />
+              <PopBox
+                icon={womanImg}
+                value={population?.total_perancang_wanita || 0}
+              />
+              <PopBox
+                icon={familyImg}
+                value={population?.total_perancang_pria || 0}
+              />
             </div>
           </div>
         </div>
 
-        {/* JENJANG */}
+        {/* CHART */}
         <div className="bg-white p-4 rounded-2xl shadow-sm">
           <h2 className="font-bold text-lg text-black mb-5">
             Jumlah Perancang per Jenjang
           </h2>
           <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={dataJenjang}>
+            <BarChart data={mergedData}>
               <XAxis dataKey="name" />
               <YAxis />
               <Tooltip />
               <Bar dataKey="value">
-                {dataJenjang.map((entry, index) => (
+                {mergedData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.fill} />
                 ))}
               </Bar>
@@ -190,5 +278,42 @@ export default function Dashboard() {
         </div>
       </div>
     </main>
+  );
+}
+
+// Komponen bantu kecil (opsional)
+function InfoBox({
+  title,
+  subtitle,
+  value,
+  icon,
+}: {
+  title: string;
+  subtitle: string;
+  value: string;
+  icon: any;
+}) {
+  return (
+    <div className="bg-white px-6 py-4 rounded-2xl shadow-md flex items-center gap-4">
+      <Image src={icon} alt="icon" />
+      <div>
+        <div className="flex items-center gap-2 font-semibold text-lg text-black">
+          {title}
+          <span className="bg-red-500 text-white px-3 py-0.5 rounded-full text-sm font-semibold">
+            {subtitle}
+          </span>
+        </div>
+        <p className="text-xl font-bold mt-1">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function PopBox({ icon, value }: { icon: any; value: number }) {
+  return (
+    <div className="flex items-center">
+      <Image src={icon} alt="icon" />
+      <p className="text-2xl font-bold text-black mt-1">{value}</p>
+    </div>
   );
 }
