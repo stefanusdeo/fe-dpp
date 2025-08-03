@@ -1,0 +1,21 @@
+version: '3'
+
+services:
+  fe-dpp:
+    container_name: fe-dpp
+    image: fe-dpp 
+    build: .
+    #  context: . # Gunakan Dockerfile yang berada di direktori app/
+    #  dockerfile: Dockerfile # Nama Dockerfile, jika berbeda, ganti dengan nama yang sesuai
+    restart: always
+  #image: my-pena:1.0.0 # Tag baru untuk image
+    ports:
+      - "2606:3000" # Port host : Port container
+    env_file:
+      -  .env.develop # Contoh pengaturan variabel lingkungan
+    #command: ["pm2-runtime", "start", "yarn", "--", "start"]
+    command: yarn dev
+
+    # volumes:
+    #   - ./app:/app # Volume mapping untuk memperbarui perubahan langsungi
+
