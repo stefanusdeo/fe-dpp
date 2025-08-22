@@ -105,18 +105,34 @@ export default function Dashboard() {
 
   const fetchInitialData = async () => {
     try {
-      const [provRes, unitRes] = await Promise.all([
-        fetch(url.dashboardProvinsi),
-        fetch(url.unitKerja),
-      ]);
+      const [provRes] = await Promise.all([fetch(url.dashboardProvinsi)]);
       const provData: ApiResponse<any> = await provRes.json();
-      const unitData: ApiResponse<any> = await unitRes.json();
       setProvince(Array.isArray(provData?.Data) ? provData.Data : []);
-      setUnitKerjaList(Array.isArray(unitData?.Data) ? unitData.Data : []);
     } catch (err) {
       console.error("Error fetching init data", err);
     }
   };
+
+  const fetchPerancangData = async () => {
+    console.log("Fetching perancang data for province:", selectedProvince);
+    if (selectedProvince) {
+      try {
+        const response = await fetch(
+          `${url.unitKerja}?provinsi_id=${selectedProvince}`
+        );
+        const data: ApiResponse<Perancang[]> = await response.json();
+        setUnitKerjaList(data?.Data ?? []);
+      } catch (err) {
+        console.error("Error fetching perancang data", err);
+      }
+    } else {
+      setUnitKerjaList([]);
+    }
+  };
+
+  useEffect(() => {
+    fetchPerancangData();
+  }, [selectedProvince]);
 
   useEffect(() => {
     fetchInitialData();
@@ -142,8 +158,8 @@ export default function Dashboard() {
   }, [selectedProvince, province]);
 
   const getFilterUnitKerja = useMemo(() => {
-    return unitKerjaList.filter((unit) =>
-      unit.nama.toLowerCase().includes(keyword.toLowerCase())
+    return (unitKerjaList || []).filter((unit) =>
+      unit.nama?.toLowerCase().includes(keyword.toLowerCase())
     );
   }, [unitKerjaList, keyword]);
 
@@ -162,7 +178,7 @@ export default function Dashboard() {
               setSelectedUnits([]);
             }}
           >
-            <option>Pilih Provinsi</option>
+            <option>Semua Provinsi</option>
             {province.map((prov) => (
               <option key={prov.id} value={prov.id}>
                 {prov.nama}
