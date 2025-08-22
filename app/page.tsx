@@ -61,6 +61,7 @@ export default function Dashboard() {
 
   const [population, setPopulation] = useState<Population | null>(null);
   const [perancang, setPerancang] = useState<Perancang[]>([]);
+  const [keyword, setSetKeyword] = useState<string>("");
 
   const fetchDashboardData = useCallback(async () => {
     try {
@@ -140,6 +141,12 @@ export default function Dashboard() {
     return province.find((p) => p.id === selectedProvince);
   }, [selectedProvince, province]);
 
+  const getFilterUnitKerja = useMemo(() => {
+    return unitKerjaList.filter((unit) =>
+      unit.nama.toLowerCase().includes(keyword.toLowerCase())
+    );
+  }, [unitKerjaList, keyword]);
+
   return (
     <main className="p-6 space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -181,7 +188,11 @@ export default function Dashboard() {
             </PopoverTrigger>
             <PopoverContent className="w-[350px] right-1 z-[9999]">
               <h4 className="text-sm font-medium mb-2">Filter Unit Kerja</h4>
-              <Input placeholder="Cari Unit Kerja" className="mb-3" />
+              <Input
+                placeholder="Cari Unit Kerja"
+                className="mb-3"
+                onChange={(e) => setSetKeyword(e.target.value)}
+              />
               <div className="flex flex-wrap gap-2 mb-3">
                 {selectedUnits.map((unitId) => {
                   const unit = unitKerjaList.find(
@@ -202,7 +213,7 @@ export default function Dashboard() {
                 })}
               </div>
               <div className="space-y-2 max-h-[150px] overflow-y-auto">
-                {unitKerjaList.map((unit, idx) => (
+                {getFilterUnitKerja.map((unit, idx) => (
                   <div key={unit.id} className="flex items-center gap-2">
                     <Checkbox
                       id={`check-${unit.id}`}
