@@ -279,14 +279,17 @@ export default function Dashboard() {
               </span>
             </div>
             <div className="flex justify-around items-center text-center">
-              <PopBox icon={manImg} value={population?.total_perancang || 0} />
+              <PopBox
+                icon={manImg}
+                value={population?.total_perancang_pria || 0}
+              />
               <PopBox
                 icon={womanImg}
                 value={population?.total_perancang_wanita || 0}
               />
               <PopBox
                 icon={familyImg}
-                value={population?.total_perancang_pria || 0}
+                value={population?.total_perancang || 0}
               />
             </div>
           </div>
