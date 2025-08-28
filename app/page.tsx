@@ -113,20 +113,21 @@ export default function Dashboard() {
     }
   };
 
+  console.log(unitKerjaList);
   const fetchPerancangData = async () => {
     console.log("Fetching perancang data for province:", selectedProvince);
+    let uri = "";
     if (selectedProvince) {
-      try {
-        const response = await fetch(
-          `${url.unitKerja}?provinsi_id=${selectedProvince}`
-        );
-        const data: ApiResponse<Perancang[]> = await response.json();
-        setUnitKerjaList(data?.Data ?? []);
-      } catch (err) {
-        console.error("Error fetching perancang data", err);
-      }
+      uri = `${url.unitKerja}?provinsi_id=${selectedProvince}`;
     } else {
-      setUnitKerjaList([]);
+      uri = url.unitKerja;
+    }
+    try {
+      const response = await fetch(uri);
+      const data: ApiResponse<Perancang[]> = await response.json();
+      setUnitKerjaList(data?.Data ?? []);
+    } catch (err) {
+      console.error("Error fetching perancang data", err);
     }
   };
 
@@ -209,7 +210,7 @@ export default function Dashboard() {
                 className="mb-3"
                 onChange={(e) => setSetKeyword(e.target.value)}
               />
-              <div className="flex flex-wrap gap-2 mb-3">
+              <div className="flex flex-wrap gap-2 mb-3 max-h-[150px] overflow-y-auto">
                 {selectedUnits.map((unitId) => {
                   const unit = unitKerjaList.find(
                     (u) => u.id.toString() === unitId
@@ -218,10 +219,12 @@ export default function Dashboard() {
                     <Badge
                       key={unitId}
                       variant="secondary"
-                      className="flex items-center bg-blue-200 text-blue-600 gap-1 pr-2"
+                      className="flex items-center bg-blue-200 text-blue-600 gap-1 pr-2 mx-2"
                     >
-                      <span className="truncate">{unit?.nama || unitId}</span>
-                      <button onClick={() => handleToggleUnit(unitId)}>
+                      <span className="flex-1 min-w-0 whitespace-normal break-words line-clamp-2">
+                        {unit?.nama || unitId}
+                      </span>
+                      <button className="ml-1 shrink-0" onClick={() => handleToggleUnit(unitId)}>
                         X
                       </button>
                     </Badge>
